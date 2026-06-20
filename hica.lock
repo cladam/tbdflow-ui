@@ -4,3 +4,8 @@
 name = "imgui"
 version = "latest"
 source = "registry+pkg.hica.dev@latest"
+
+[[package]]
+name = "json"
+version = "latest"
+source = "registry+pkg.hica.dev@latest"
