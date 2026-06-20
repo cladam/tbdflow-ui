@@ -14,3 +14,8 @@
     homepage: "https://cladam.github.io/projects/tbdflow/"
     repository: "https://github.com/cladam/tbdflow-ui"
 }
+
+@koka {
+    include: "src"
+    flags: "--cclinkopts=-Llib --cclinkopts=-L/opt/homebrew/opt/sdl2/lib --cclib=imgui_hica --cclib=SDL2 --cclinkopts=-lc++ --cclinkopts=-framework --cclinkopts=OpenGL"
+}
