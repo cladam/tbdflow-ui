@@ -1,0 +1,16 @@
+@project {
+    name: "tbdflow-ui"
+    version: "0.1.0"
+    license: "MIT"
+    entry: "src/main.hc"
+}
+
+@dependencies {
+}
+
+@description {
+    summary: "UI for tbdflow"
+    author: "@cladam"
+    homepage: "https://cladam.github.io/projects/tbdflow/"
+    repository: "https://github.com/cladam/tbdflow-ui"
+}
