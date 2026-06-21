@@ -99,7 +99,7 @@ fun main() {
   var note_input_id = 0
   var notes_log = ""
 
-  gui_window("tbdflow", 1100, 720, () => {
+  gui_window("tbdflow-ui", 1100, 720, () => {
     apply_theme()
 
     if repo_path != last_loaded_path {
