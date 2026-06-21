@@ -5,6 +5,7 @@ pub struct Config {
   mode: string,
   main_branch: string,
   current_branch: string,
+  remote_url: string,
   ci_check_enabled: bool,
   radar_enabled: bool,
   review_enabled: bool,
@@ -22,8 +23,8 @@ pub struct Status {
   changed_files: list<string>
 }
 
-pub fun load_info() {
-  match exec("tbdflow --json info") {
+pub fun load_info(path: string) {
+  match exec(cmd_in(path, "tbdflow --json info")) {
     Err(_) => None,
     Ok(raw) => parse_info(raw)
   }
@@ -36,6 +37,7 @@ pub fun parse_info(text: string) {
     mode:             data.at("mode").str_or("unknown"),
     main_branch:      data.at("main_branch_name").str_or("main"),
     current_branch:   data.at("git").at("current_branch").str_or("unknown"),
+    remote_url:       data.at("git").at("remote_url").str_or(""),
     ci_check_enabled: data.at("ci_check_enabled").bool_or(false),
     radar_enabled:    data.at("radar").at("enabled").bool_or(false),
     review_enabled:   data.at("review").at("enabled").bool_or(false),
@@ -96,8 +98,8 @@ pub fun build_commit_cmd(ctype: string, msg: string, scope: string, body: string
   s6
 }
 
-pub fun load_status() {
-  match exec("tbdflow --json status") {
+pub fun load_status(path: string) {
+  match exec(cmd_in(path, "tbdflow --json status")) {
     Err(_) => None,
     Ok(raw) => parse_status(raw)
   }
@@ -115,4 +117,44 @@ pub fun parse_status(text: string) {
     changed_count:  data.at("changed_files").json_length,
     changed_files:  extract_string_array(data.at("changed_files"))
   })
+}
+
+pub struct Commit {
+  hash: string,
+  subject: string,
+  author: string,
+  when_str: string
+}
+
+pub fun load_log(path: string) {
+  match exec(cmd_in(path, "git log --pretty=format:\"%h|%s|%an|%ar\" -25")) {
+    Err(_) => [],
+    Ok(raw) => parse_log_lines(split(trim(raw), "\n"))
+  }
+}
+
+pub fun cmd_in(path: string, cmd: string) {
+  if path != "" { "cd \"" + path + "\" && " + cmd } else { cmd }
+}
+
+pub fun parse_log_lines(lines: list<string>) {
+  match lines {
+    [] => [],
+    [line, ..rest] =>
+      if line == "" {
+        parse_log_lines(rest)
+      } else {
+        [parse_commit_line(line)] + parse_log_lines(rest)
+      }
+  }
+}
+
+pub fun parse_commit_line(line: string) {
+  let parts = split(line, "|")
+  Commit {
+    hash:     nth_str(parts, 0),
+    subject:  nth_str(parts, 1),
+    author:   nth_str(parts, 2),
+    when_str: nth_str(parts, 3)
+  }
 }
