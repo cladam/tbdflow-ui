@@ -57,7 +57,11 @@ fun render_radar_panel(s: Status) {
     gui_text_colored("✓ Tree Synced & Pure", 0.06, 0.71, 0.65, 1.0)
   } else {
     gui_text_colored("⚠ WIP Change Alert", 0.94, 0.33, 0.31, 1.0)
-    gui_text(show(s.changed_count) + " altered files")
+    gui_spacing()
+    for f in s.changed_files {
+      gui_text(f)
+    }
+    gui_spacing()
     label("Run sync to audit collision vectors.")
   }
 }
@@ -65,7 +69,14 @@ fun render_radar_panel(s: Status) {
 fun main() {
   var info   = None
   var status = None
-  var last_output = ""
+  var last_output  = ""
+  var show_advanced = false
+  var opt_scope     = ""
+  var opt_body      = ""
+  var opt_tag       = ""
+  var opt_issue     = ""
+  var opt_breaking  = false
+  var opt_no_verify = false
 
   gui_window("tbdflow", 1100, 720, () => {
     apply_theme()
@@ -124,9 +135,22 @@ fun main() {
       let cmsg      = gui_input_text("Message##cmsg", 256)
       gui_spacing()
 
+      show_advanced = gui_checkbox("Advanced options", show_advanced)
+      if show_advanced {
+        gui_spacing()
+        opt_scope     = gui_input_text("Scope (-s)##scope", 64)
+        opt_body      = gui_input_text("Body (--body)##body", 512)
+        opt_tag       = gui_input_text("Tag (--tag)##tag", 64)
+        opt_issue     = gui_input_text("Issue (--issue)##issue", 64)
+        opt_breaking  = gui_checkbox("Breaking change (-b)", opt_breaking)
+        opt_no_verify = gui_checkbox("Skip DoD checklist (--no-verify)", opt_no_verify)
+        gui_spacing()
+      }
+
       if gui_button("Verify & Commit") {
         if cmsg != "" && ctype != "" {
-          match exec("tbdflow commit -t " + ctype + " -m \"" + cmsg + "\"") {
+          let cmd = build_commit_cmd(ctype, cmsg, opt_scope, opt_body, opt_tag, opt_issue, opt_breaking, opt_no_verify)
+          match exec(cmd) {
             Ok(out) => last_output = out,
             Err(e)  => last_output = "Commit rejected: " + e
           }

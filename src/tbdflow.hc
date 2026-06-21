@@ -18,7 +18,8 @@ pub struct Status {
   ahead: int,
   behind: int,
   trunk_ci: string,
-  changed_count: int
+  changed_count: int,
+  changed_files: list<string>
 }
 
 pub fun load_info() {
@@ -42,14 +43,19 @@ pub fun parse_info(text: string) {
   })
 }
 
-pub fun extract_types(arr: maybe<Json>) {
+pub fun extract_string_array(arr: maybe<Json>) {
   match arr {
-    None => ["feat", "fix", "chore", "docs", "refactor", "ci", "test"],
+    None => [],
     Some(j) => match json_array(j) {
-      None => ["feat", "fix", "chore"],
+      None => [],
       Some(items) => collect_strings(items)
     }
   }
+}
+
+pub fun extract_types(arr: maybe<Json>) {
+  let items = extract_string_array(arr)
+  if length(items) == 0 { ["feat", "fix", "chore", "docs", "refactor", "ci", "test"] } else { items }
 }
 
 pub fun collect_strings(items: list<Json>) {
@@ -77,6 +83,19 @@ pub fun nth_str(items: list<string>, i: int) {
   }
 }
 
+// Build a tbdflow commit command string from parts.
+// Empty optional strings are omitted.
+pub fun build_commit_cmd(ctype: string, msg: string, scope: string, body: string, tag: string, issue: string, breaking: bool, no_verify: bool) {
+  let base = "tbdflow commit -t " + ctype + " -m \"" + msg + "\""
+  let s1 = if scope != ""   { base  + " -s " + scope }          else { base }
+  let s2 = if body  != ""   { s1    + " --body \"" + body + "\"" } else { s1 }
+  let s3 = if tag   != ""   { s2    + " --tag " + tag }           else { s2 }
+  let s4 = if issue != ""   { s3    + " --issue " + issue }        else { s3 }
+  let s5 = if breaking      { s4    + " --breaking" }              else { s4 }
+  let s6 = if no_verify     { s5    + " --no-verify" }             else { s5 }
+  s6
+}
+
 pub fun load_status() {
   match exec("tbdflow --json status") {
     Err(_) => None,
@@ -93,6 +112,7 @@ pub fun parse_status(text: string) {
     ahead:          data.at("ahead").int_or(0),
     behind:         data.at("behind").int_or(0),
     trunk_ci:       data.at("trunk_ci").str_or("unknown"),
-    changed_count:  data.at("changed_files").json_length
+    changed_count:  data.at("changed_files").json_length,
+    changed_files:  extract_string_array(data.at("changed_files"))
   })
 }
