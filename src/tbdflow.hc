@@ -5,7 +5,20 @@ pub struct Config {
   mode: string,
   main_branch: string,
   current_branch: string,
-  ci_check_enabled: bool
+  ci_check_enabled: bool,
+  radar_enabled: bool,
+  review_enabled: bool,
+  allowed_types: list<string>
+}
+
+pub struct Status {
+  current_branch: string,
+  is_main: bool,
+  is_clean: bool,
+  ahead: int,
+  behind: int,
+  trunk_ci: string,
+  changed_count: int
 }
 
 pub fun load_info() {
@@ -16,10 +29,70 @@ pub fun load_info() {
 }
 
 pub fun parse_info(text: string) {
-  let data = parse_json(text) |> json_ok |> at("data")
-  let mode = str_or(data |> at("mode"), "unknown")
-  let branch = str_or(data |> at("main_branch_name"), "main")
-  let current = str_or(data |> at("git") |> at("current_branch"), "unknown")
-  let ci = bool_or(data |> at("ci_check_enabled"), false)
-  Some(Config { mode: mode, main_branch: branch, current_branch: current, ci_check_enabled: ci })
+  let data = parse_json(text).json_ok.at("data")
+  let types = extract_types(data.at("allowed_branch_types"))
+  Some(Config {
+    mode:             data.at("mode").str_or("unknown"),
+    main_branch:      data.at("main_branch_name").str_or("main"),
+    current_branch:   data.at("git").at("current_branch").str_or("unknown"),
+    ci_check_enabled: data.at("ci_check_enabled").bool_or(false),
+    radar_enabled:    data.at("radar").at("enabled").bool_or(false),
+    review_enabled:   data.at("review").at("enabled").bool_or(false),
+    allowed_types:    types
+  })
+}
+
+pub fun extract_types(arr: maybe<Json>) {
+  match arr {
+    None => ["feat", "fix", "chore", "docs", "refactor", "ci", "test"],
+    Some(j) => match json_array(j) {
+      None => ["feat", "fix", "chore"],
+      Some(items) => collect_strings(items)
+    }
+  }
+}
+
+pub fun collect_strings(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => match json_str(x) {
+      None    => collect_strings(rest),
+      Some(s) => [s] + collect_strings(rest)
+    }
+  }
+}
+
+pub fun types_to_combo_str(types: list<string>) {
+  match types {
+    [] => "",
+    [x] => x,
+    [x, ..rest] => x + "\n" + types_to_combo_str(rest)
+  }
+}
+
+pub fun nth_str(items: list<string>, i: int) {
+  match items {
+    [] => "",
+    [x, ..rest] => if i == 0 { x } else { nth_str(rest, i - 1) }
+  }
+}
+
+pub fun load_status() {
+  match exec("tbdflow --json status") {
+    Err(_) => None,
+    Ok(raw) => parse_status(raw)
+  }
+}
+
+pub fun parse_status(text: string) {
+  let data = parse_json(text).json_ok.at("data")
+  Some(Status {
+    current_branch: data.at("current_branch").str_or("unknown"),
+    is_main:        data.at("is_main").bool_or(false),
+    is_clean:       data.at("is_clean").bool_or(true),
+    ahead:          data.at("ahead").int_or(0),
+    behind:         data.at("behind").int_or(0),
+    trunk_ci:       data.at("trunk_ci").str_or("unknown"),
+    changed_count:  data.at("changed_files").json_length
+  })
 }

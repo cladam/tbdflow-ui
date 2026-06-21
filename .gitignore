@@ -1,5 +1,6 @@
 .koka
 .hica
+.DS_Store
 
 examples/*
 !examples/*.hc
