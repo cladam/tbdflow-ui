@@ -85,7 +85,7 @@ fun main() {
   var info   = None
   var status = None
   var log    = []
-  var loaded = false
+  var last_loaded_path = "__never__"
   var last_output  = ""
   var show_advanced = false
   var opt_scope     = ""
@@ -95,15 +95,19 @@ fun main() {
   var opt_breaking  = false
   var opt_no_verify = false
   var repo_path = ""
+  var note_text = ""
+  var note_input_id = 0
+  var notes_log = ""
 
   gui_window("tbdflow", 1100, 720, () => {
     apply_theme()
 
-    if !loaded {
-      info   = load_info(repo_path)
-      status = load_status(repo_path)
-      log    = load_log(repo_path)
-      loaded = true
+    if repo_path != last_loaded_path {
+      info      = load_info(repo_path)
+      status    = load_status(repo_path)
+      log       = load_log(repo_path)
+      notes_log = load_notes(repo_path)
+      last_loaded_path = repo_path
     }
 
     // ── Left: Context ───
@@ -112,7 +116,29 @@ fun main() {
       gui_separator()
       gui_spacing()
       label("Repository")
-      repo_path = gui_input_text("##rpath", 512)
+      if repo_path == "" {
+        gui_text("(current directory)")
+      } else {
+        gui_text_wrapped(repo_path)
+      }
+      gui_spacing()
+      if gui_button("Browse…") {
+        match exec("osascript -e 'POSIX path of (choose folder)'") {
+          Ok(picked) => {
+            let parts = split(picked, "\n")
+            let p = match parts { [] => "", [h, ..] => h }
+            if p != "" {
+              repo_path = p
+              last_loaded_path = "__reload__"
+            }
+          },
+          Err(_) => { }
+        }
+      }
+      gui_same_line()
+      if gui_button("Refresh") {
+        last_loaded_path = "__reload__"
+      }
       gui_spacing()
 
       match info {
@@ -121,15 +147,6 @@ fun main() {
           None    => gui_text("No status"),
           Some(s) => render_sidebar_context(i, s)
         }
-      }
-
-      gui_spacing()
-      gui_separator()
-      gui_spacing()
-      if gui_button("Refresh") {
-        info   = load_info(repo_path)
-        status = load_status(repo_path)
-        log    = load_log(repo_path)
       }
     })
 
@@ -145,6 +162,32 @@ fun main() {
           Ok(out) => last_output = out,
           Err(e)  => last_output = "Sync failed: " + e
         }
+      }
+
+      gui_spacing()
+      gui_separator()
+      gui_spacing()
+
+      label("Intent Log")
+      gui_spacing()
+      note_text = gui_input_text("##note" + show(note_input_id), 256)
+      gui_same_line()
+      if gui_button("Add Note") {
+        if note_text != "" {
+          match exec(cmd_in(repo_path, "tbdflow note \"" + note_text + "\"")) {
+            Ok(_) => {
+              note_input_id = note_input_id + 1
+              notes_log = load_notes(repo_path)
+            },
+            Err(_) => { }
+          }
+        }
+      }
+      if notes_log != "" {
+        gui_spacing()
+        gui_child("##noteslog", 0.0, 90.0, () => {
+          gui_text_wrapped(notes_log)
+        })
       }
 
       gui_spacing()

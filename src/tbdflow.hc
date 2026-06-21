@@ -133,6 +133,13 @@ pub fun load_log(path: string) {
   }
 }
 
+pub fun load_notes(path: string) {
+  match exec(cmd_in(path, "tbdflow note --show")) {
+    Ok(out) => out,
+    Err(_)  => ""
+  }
+}
+
 pub fun cmd_in(path: string, cmd: string) {
   if path != "" { "cd \"" + path + "\" && " + cmd } else { cmd }
 }
