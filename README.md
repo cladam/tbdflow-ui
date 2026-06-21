@@ -1,11 +1,11 @@
 # tbdflow-ui
 
 A desktop dashboard for [tbdflow](https://github.com/cladam/tbdflow) — the Trunk-Based Development CLI.  
-Built with [Hica](https://hica.dev) and Dear ImGui.
+Built with [hica](https://www.hica.dev) and Dear ImGui.
 
 ## What it does
 
-tbdflow-ui puts your trunk workflow in a persistent window alongside your editor:
+`tbdflow-ui` puts your trunk workflow in a persistent window alongside your editor:
 
 | Panel | Contents |
 |-------|----------|
@@ -24,7 +24,7 @@ tbdflow-ui puts your trunk workflow in a persistent window alongside your editor
 ## Prerequisites
 
 - [tbdflow](https://github.com/cladam/tbdflow) on `PATH`
-- [Hica](https://hica.dev) on `PATH`
+- [hica](https://www.hica.dev) on `PATH`
 - SDL2: `brew install sdl2`
 
 ## Build and run
