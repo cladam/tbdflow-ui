@@ -126,6 +126,21 @@ pub struct Commit {
   when_str: string
 }
 
+pub struct Hotspot {
+  file: string,
+  changes_count: int
+}
+
+pub struct Radar {
+  trunk_branch: string,
+  trunk_status: string,
+  last_integrated_mins: int,
+  branches_scanned: int,
+  local_files_count: int,
+  overlap_count: int,
+  hotspots: list<Hotspot>
+}
+
 pub fun load_log(path: string) {
   match exec(cmd_in(path, "git log --pretty=format:\"%h|%s|%an|%ar\" -25")) {
     Err(_) => [],
@@ -137,6 +152,61 @@ pub fun load_notes(path: string) {
   match exec(cmd_in(path, "tbdflow note --show")) {
     Ok(out) => out,
     Err(_)  => ""
+  }
+}
+
+pub fun load_radar(path: string) {
+  match exec(cmd_in(path, "tbdflow --json radar")) {
+    Ok(raw) => parse_radar(raw),
+    Err(_)  => None
+  }
+}
+
+pub fun parse_radar(text: string) {
+  let data  = parse_json(text).json_ok.at("data")
+  let trunk = data.at("trunk")
+  Some(Radar {
+    trunk_branch:         trunk.at("branch_name").str_or("unknown"),
+    trunk_status:         trunk.at("status").str_or("unknown"),
+    last_integrated_mins: trunk.at("last_integrated_minutes_ago").int_or(0),
+    branches_scanned:     data.at("branches_scanned").int_or(0),
+    local_files_count:    data.at("local_files_count").int_or(0),
+    overlap_count:        count_json_array(data.at("overlaps")),
+    hotspots:             extract_hotspots(data.at("hotspots"))
+  })
+}
+
+pub fun extract_hotspots(arr: maybe<Json>) {
+  match arr {
+    None    => [],
+    Some(j) => match json_array(j) {
+      None        => [],
+      Some(items) => parse_hotspots(items)
+    }
+  }
+}
+
+pub fun parse_hotspots(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => [parse_hotspot(x)] + parse_hotspots(rest)
+  }
+}
+
+pub fun parse_hotspot(j: Json) {
+  Hotspot {
+    file:          Some(j).at("file").str_or(""),
+    changes_count: Some(j).at("changes_count").int_or(0)
+  }
+}
+
+pub fun count_json_array(arr: maybe<Json>) {
+  match arr {
+    None    => 0,
+    Some(j) => match json_array(j) {
+      None        => 0,
+      Some(items) => length(items)
+    }
   }
 }
 

@@ -7,6 +7,14 @@ fun label(text: string) {
   gui_text_colored(text, 0.55, 0.60, 0.65, 1.0)
 }
 
+fun format_mins(mins: int) {
+  if mins < 60 {
+    show(mins) + " min ago"
+  } else {
+    show(mins / 60) + "h ago"
+  }
+}
+
 fun render_sidebar_context(i: Config, s: Status) {
   label("Branch")
   gui_text(s.current_branch)
@@ -81,6 +89,36 @@ fun render_log_entry(c: Commit, repo_url: string) {
   gui_spacing()
 }
 
+fun render_radar_json(r: Radar) {
+  label("Trunk")
+  gui_text(r.trunk_branch)
+  gui_same_line()
+  if r.trunk_status == "green" {
+    gui_text_colored("● " + r.trunk_status, 0.06, 0.71, 0.65, 1.0)
+  } else {
+    gui_text_colored("● " + r.trunk_status, 0.94, 0.33, 0.31, 1.0)
+  }
+  label("Last integrated")
+  gui_text(format_mins(r.last_integrated_mins))
+  gui_spacing()
+  gui_separator()
+  gui_spacing()
+  label("Branches scanned")
+  gui_text(show(r.branches_scanned))
+  gui_spacing()
+  label("Overlaps")
+  gui_text(show(r.overlap_count))
+  gui_spacing()
+  label("Hotspots")
+  if length(r.hotspots) == 0 {
+    gui_text("none")
+  } else {
+    for h in r.hotspots {
+      gui_bullet_text(h.file + " (" + show(h.changes_count) + ")")
+    }
+  }
+}
+
 fun main() {
   var info   = None
   var status = None
@@ -98,6 +136,7 @@ fun main() {
   var note_text = ""
   var note_input_id = 0
   var notes_log = ""
+  var radar = None
 
   gui_window("tbdflow-ui", 1100, 720, () => {
     apply_theme()
@@ -107,6 +146,7 @@ fun main() {
       status    = load_status(repo_path)
       log       = load_log(repo_path)
       notes_log = load_notes(repo_path)
+      radar     = load_radar(repo_path)
       last_loaded_path = repo_path
     }
 
@@ -249,6 +289,13 @@ fun main() {
     // ── Right: Radar & Hotspots ──
     gui_child("##right", 0.0, 0.0, () => {
       label("RADAR & OVERLAP MATRIX")
+      gui_separator()
+      gui_spacing()
+      match radar {
+        None    => gui_text("No radar data."),
+        Some(r) => render_radar_json(r)
+      }
+      gui_spacing()
       gui_separator()
       gui_spacing()
       match status {
