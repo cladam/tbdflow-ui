@@ -15,6 +15,10 @@ fun format_mins(mins: int) {
   }
 }
 
+fun truncate(s: string, n: int) {
+  if length(s) > n { s[0:n] + "…" } else { s }
+}
+
 fun render_sidebar_context(i: Config, s: Status) {
   label("Branch")
   gui_text(s.current_branch)
@@ -24,54 +28,8 @@ fun render_sidebar_context(i: Config, s: Status) {
   gui_text(i.mode)
   gui_spacing()
 
-  label("Trunk Target")
+  label("Trunk target")
   gui_text(i.main_branch)
-  gui_spacing()
-  gui_separator()
-  gui_spacing()
-
-  label("CI Status:")
-  gui_same_line()
-  if i.ci_check_enabled {
-    gui_text_colored("● Enabled", 0.06, 0.71, 0.65, 1.0)
-  } else {
-    gui_text_colored("○ Disabled", 0.94, 0.33, 0.31, 1.0)
-  }
-
-  label("Radar:")
-  gui_same_line()
-  if i.radar_enabled {
-    gui_text_colored("● Active", 0.06, 0.71, 0.65, 1.0)
-  } else {
-    gui_text_colored("○ Off", 0.94, 0.33, 0.31, 1.0)
-  }
-}
-
-fun render_radar_panel(s: Status) {
-  label("Trunk Proximity")
-  gui_text(" Ahead:  " + show(s.ahead) + " commits")
-  gui_text(" Behind: " + show(s.behind) + " commits")
-  gui_spacing()
-  gui_separator()
-  gui_spacing()
-
-  label("Trunk CI")
-  gui_text_wrapped(s.trunk_ci)
-  gui_spacing()
-  gui_separator()
-  gui_spacing()
-
-  if s.is_clean {
-    gui_text_colored("✓ Tree Synced & Pure", 0.06, 0.71, 0.65, 1.0)
-  } else {
-    gui_text_colored("⚠ WIP Change Alert", 0.94, 0.33, 0.31, 1.0)
-    gui_spacing()
-    for f in s.changed_files {
-      gui_text(f)
-    }
-    gui_spacing()
-    label("Run sync to audit collision vectors.")
-  }
 }
 
 fun render_log_entry(c: Commit, repo_url: string) {
@@ -84,12 +42,12 @@ fun render_log_entry(c: Commit, repo_url: string) {
     }
   }
   gui_same_line()
-  gui_text(c.subject)
+  gui_text(truncate(c.subject, 72))
   label(c.author + " · " + c.when_str)
   gui_spacing()
 }
 
-fun render_radar_json(r: Radar) {
+fun render_awareness(i: Config, s: Status, r: Radar) {
   label("Trunk")
   gui_text(r.trunk_branch)
   gui_same_line()
@@ -101,8 +59,25 @@ fun render_radar_json(r: Radar) {
   label("Last integrated")
   gui_text(format_mins(r.last_integrated_mins))
   gui_spacing()
+
+  label("CI")
+  gui_same_line()
+  if i.ci_check_enabled {
+    gui_text_colored("● Enabled", 0.06, 0.71, 0.65, 1.0)
+  } else {
+    gui_text_colored("○ Disabled", 0.94, 0.33, 0.31, 1.0)
+  }
+  if s.trunk_ci != "unknown" && s.trunk_ci != "" {
+    gui_text_wrapped(s.trunk_ci)
+  }
+  gui_spacing()
+
+  label("Ahead / Behind")
+  gui_text(show(s.ahead) + " / " + show(s.behind))
+  gui_spacing()
   gui_separator()
   gui_spacing()
+
   label("Branches scanned")
   gui_text(show(r.branches_scanned))
   gui_spacing()
@@ -115,6 +90,17 @@ fun render_radar_json(r: Radar) {
   } else {
     for h in r.hotspots {
       gui_bullet_text(h.file + " (" + show(h.changes_count) + ")")
+    }
+  }
+
+  if !s.is_clean {
+    gui_spacing()
+    gui_separator()
+    gui_spacing()
+    gui_text_colored("⚠ WIP Changes", 0.94, 0.33, 0.31, 1.0)
+    gui_spacing()
+    for f in s.changed_files {
+      gui_text(f)
     }
   }
 }
@@ -151,7 +137,7 @@ fun main() {
     }
 
     // ── Left: Context ───
-    gui_child("##left", 220.0, 0.0, () => {
+    gui_child("##left", 200.0, 430.0, () => {
       gui_text_colored("tbdflow-ui", 0.23, 0.51, 0.96, 1.0)
       gui_separator()
       gui_spacing()
@@ -192,9 +178,8 @@ fun main() {
 
     gui_same_line()
 
-    // ── Center: Action & Safety ──-
-    gui_child("##center", 440.0, 0.0, () => {
-      label("CORE ENGINE OPERATIONS")
+    // ── Centre: Workflow ──
+    gui_child("##center", 500.0, 430.0, () => {
       gui_spacing()
 
       if gui_button("Sync Workspace & Pull Trunk") {
@@ -225,9 +210,7 @@ fun main() {
       }
       if notes_log != "" {
         gui_spacing()
-        gui_child("##noteslog", 0.0, 90.0, () => {
-          gui_text_wrapped(notes_log)
-        })
+        gui_text_wrapped(notes_log)
       }
 
       gui_spacing()
@@ -270,37 +253,35 @@ fun main() {
           last_output = "Type and message are required."
         }
       }
-
-      gui_spacing()
-      gui_separator()
-      gui_spacing()
-      label("RECENT COMMITS")
-      gui_spacing()
-      gui_child("##log", 0.0, 0.0, () => {
-        let repo_url = match info { None => "", Some(i) => i.remote_url }
-        for c in log {
-          render_log_entry(c, repo_url)
-        }
-      })
     })
 
     gui_same_line()
 
-    // ── Right: Radar & Hotspots ──
-    gui_child("##right", 0.0, 0.0, () => {
-      label("RADAR & OVERLAP MATRIX")
+    // ── Right: Awareness ──
+    gui_child("##right", 0.0, 430.0, () => {
+      label("AWARENESS")
       gui_separator()
       gui_spacing()
-      match radar {
-        None    => gui_text("No radar data."),
-        Some(r) => render_radar_json(r)
+      match info {
+        None    => gui_text("No data"),
+        Some(i) => match status {
+          None    => gui_text("Loading…"),
+          Some(s) => match radar {
+            None    => gui_text("Loading…"),
+            Some(r) => render_awareness(i, s, r)
+          }
+        }
       }
-      gui_spacing()
+    })
+
+    // ── Bottom: Recent Commits (full width) ──
+    gui_child("##bottom", 0.0, 0.0, () => {
+      label("Recent Commits")
       gui_separator()
       gui_spacing()
-      match status {
-        None    => gui_text("No telemetry loaded."),
-        Some(s) => render_radar_panel(s)
+      let repo_url = match info { None => "", Some(i) => i.remote_url }
+      for c in log {
+        render_log_entry(c, repo_url)
       }
     })
   })
