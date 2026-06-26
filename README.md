@@ -1,7 +1,25 @@
+<div align="center">
+  <p align="center">
+    <img src="assets/tbdflow-logo.png" alt="tbdflow logo" width="200"/>
+  </p>
+
+  <p align="center">
+    <i><b>Keep your code flowing</b></i><br/>
+  </p>
+
+[![Crates.io](https://img.shields.io/crates/v/tbdflow.svg)](https://crates.io/crates/tbdflow)
+[![Downloads](https://img.shields.io/crates/d/tbdflow.svg)](https://crates.io/crates/tbdflow)
+
+</div>
+
 # tbdflow-ui
 
-A desktop dashboard for [tbdflow](https://github.com/cladam/tbdflow) — the Trunk-Based Development CLI.  
+A desktop dashboard for [tbdflow](https://github.com/cladam/tbdflow) – the Trunk-Based Development CLI.  
 Built with [hica](https://www.hica.dev) and [Dear ImGui](https://github.com/ocornut/imgui).
+
+<div align="center">
+  <img src="assets/screenshot.png" alt="tbdflow-ui screenshot" width="700"/>
+</div>
 
 ## The problem
 
