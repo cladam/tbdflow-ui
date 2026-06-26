@@ -18,7 +18,7 @@ A desktop dashboard for [tbdflow](https://github.com/cladam/tbdflow) – the Tru
 Built with [hica](https://www.hica.dev) and [Dear ImGui](https://github.com/ocornut/imgui).
 
 <div align="center">
-  <img src="assets/screenshot.png" alt="tbdflow-ui screenshot" width="700"/>
+  <img src="assets/screenshot2.png" alt="tbdflow-ui screenshot" width="700"/>
 </div>
 
 ## The problem
