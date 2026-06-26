@@ -141,6 +141,19 @@ pub struct Radar {
   hotspots: list<Hotspot>
 }
 
+pub struct Note {
+  timestamp: string,
+  text: string,
+  snapshot_hash: string
+}
+
+pub struct IntentLog {
+  has_active_task: bool,
+  task_description: string,
+  branch_context: string,
+  notes: list<Note>
+}
+
 pub fun load_log(path: string) {
   match exec(cmd_in(path, "git log --pretty=format:\"%h|%s|%an|%ar\" -25")) {
     Err(_) => [],
@@ -148,10 +161,45 @@ pub fun load_log(path: string) {
   }
 }
 
-pub fun load_notes(path: string) {
-  match exec(cmd_in(path, "tbdflow note --show")) {
-    Ok(out) => out,
-    Err(_)  => ""
+pub fun load_intent_log(path: string) {
+  match exec(cmd_in(path, "tbdflow --json note --show")) {
+    Ok(raw) => parse_intent_log(raw),
+    Err(_)  => None
+  }
+}
+
+pub fun parse_intent_log(text: string) {
+  let data = parse_json(text).json_ok.at("data")
+  Some(IntentLog {
+    has_active_task:  data.at("has_active_task").bool_or(false),
+    task_description: data.at("task_description").str_or(""),
+    branch_context:   data.at("branch_context").str_or(""),
+    notes:            extract_notes(data.at("notes"))
+  })
+}
+
+pub fun extract_notes(arr: maybe<Json>) {
+  match arr {
+    None    => [],
+    Some(j) => match json_array(j) {
+      None        => [],
+      Some(items) => parse_notes(items)
+    }
+  }
+}
+
+pub fun parse_notes(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => [parse_note(x)] + parse_notes(rest)
+  }
+}
+
+pub fun parse_note(j: Json) {
+  Note {
+    timestamp:     Some(j).at("timestamp").str_or(""),
+    text:          Some(j).at("text").str_or(""),
+    snapshot_hash: Some(j).at("snapshot_hash").str_or("")
   }
 }
 

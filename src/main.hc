@@ -1,4 +1,5 @@
 import "imgui"
+import "std/datetime"
 import "./tbdflow-ui_theme"
 import "./tbdflow"
 
@@ -17,6 +18,13 @@ fun format_mins(mins: int) {
 
 fun truncate(s: string, n: int) {
   if length(s) > n { s[0:n] + "…" } else { s }
+}
+
+fun short_time(ts: string) {
+  match datetime_time(ts) {
+    Ok(t)  => t[0:5],
+    Err(_) => ts
+  }
 }
 
 fun render_sidebar_context(i: Config, s: Status) {
@@ -45,6 +53,22 @@ fun render_log_entry(c: Commit, repo_url: string) {
   gui_text(truncate(c.subject, 72))
   label(c.author + " · " + c.when_str)
   gui_spacing()
+}
+
+fun render_intent_log(il: IntentLog) {
+  if il.has_active_task {
+    gui_text_colored("● Task: " + il.task_description, 0.23, 0.51, 0.96, 1.0)
+    gui_spacing()
+  }
+  if length(il.notes) == 0 {
+    label("no notes yet")
+  } else {
+    for n in il.notes {
+      label(short_time(n.timestamp))
+      gui_same_line()
+      gui_text_wrapped(n.text)
+    }
+  }
 }
 
 fun render_awareness(i: Config, s: Status, r: Radar) {
@@ -122,6 +146,7 @@ fun main() {
   var note_text = ""
   var note_input_id = 0
   var notes_log = ""
+  var intent_log = None
   var radar = None
 
   gui_window("tbdflow-ui", 1100, 720, () => {
@@ -131,7 +156,8 @@ fun main() {
       info      = load_info(repo_path)
       status    = load_status(repo_path)
       log       = load_log(repo_path)
-      notes_log = load_notes(repo_path)
+      notes_log = ""
+      intent_log = load_intent_log(repo_path)
       radar     = load_radar(repo_path)
       last_loaded_path = repo_path
     }
@@ -202,7 +228,7 @@ fun main() {
           match exec(cmd_in(repo_path, "tbdflow note \"" + note_text + "\"")) {
             Ok(_) => {
               note_input_id = note_input_id + 1
-              notes_log = load_notes(repo_path)
+              intent_log = load_intent_log(repo_path)
             },
             Err(_) => { }
           }
@@ -211,6 +237,13 @@ fun main() {
       if notes_log != "" {
         gui_spacing()
         gui_text_wrapped(notes_log)
+      }
+      match intent_log {
+        None     => { },
+        Some(il) => {
+          gui_spacing()
+          render_intent_log(il)
+        }
       }
 
       gui_spacing()

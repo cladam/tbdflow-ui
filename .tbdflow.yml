@@ -1,6 +1,7 @@
 main_branch_name: main
 release_url_template: https://github.com/cladam/tbdflow-ui/releases/tag/{{version}}
 stale_branch_threshold_days: 1
+log_display_count: 25   # default: 15
 monorepo:
   enabled: false
   project_dirs: []
