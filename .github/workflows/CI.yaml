@@ -59,12 +59,14 @@ jobs:
         shell: bash
         continue-on-error: ${{ runner.os == 'Windows' }}
         run: |
+          cd tests
           failed=0
-          for f in tests/test_*.hc; do
-            echo "==> $(basename $f)"
-            output=$(hica run "$f" 2>&1)
+          for d in test_*/; do
+            name="${d%/}"
+            echo "==> $name"
+            output=$(hica test "$name/main.hc" 2>&1)
             echo "$output"
-            if echo "$output" | grep -q "✗"; then
+            if ! echo "$output" | grep -q "passed"; then
               failed=1
             fi
           done
