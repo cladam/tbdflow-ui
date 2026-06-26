@@ -97,7 +97,7 @@ fun render_awareness(i: Config, s: Status, r: Radar) {
   gui_spacing()
 
   label("Ahead / Behind")
-  gui_text(show(s.ahead) + " / " + show(s.behind))
+  gui_text(show(s.ahead) + " / " + show(s.commits_behind))
   gui_spacing()
   gui_separator()
   gui_spacing()

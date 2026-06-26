@@ -17,7 +17,7 @@ pub struct Status {
   is_main: bool,
   is_clean: bool,
   ahead: int,
-  behind: int,
+  commits_behind: int,
   trunk_ci: string,
   changed_count: int,
   changed_files: list<string>
@@ -112,7 +112,7 @@ pub fun parse_status(text: string) {
     is_main:        data.at("is_main").bool_or(false),
     is_clean:       data.at("is_clean").bool_or(true),
     ahead:          data.at("ahead").int_or(0),
-    behind:         data.at("behind").int_or(0),
+    commits_behind:  data.at("behind").int_or(0),
     trunk_ci:       data.at("trunk_ci").str_or("unknown"),
     changed_count:  data.at("changed_files").json_length,
     changed_files:  extract_string_array(data.at("changed_files"))
