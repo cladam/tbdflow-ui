@@ -1,0 +1,6 @@
+// Test-scope manifest: overrides the project hica.hml so that hica test
+// does not pick up the imgui/SDL2 native linker flags (unavailable in CI).
+// Dependency resolution still uses the project-level hica.hml (CWD).
+@koka {
+    include: "../src"
+}

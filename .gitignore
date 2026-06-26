@@ -10,6 +10,7 @@ src/*
 
 tests/*
 !tests/*.hc
+!tests/*.hml
 
 hica-tbdflow.md
 
