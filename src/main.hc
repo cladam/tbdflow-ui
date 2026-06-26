@@ -209,9 +209,12 @@ fun main() {
       gui_spacing()
 
       if gui_button("Sync Workspace & Pull Trunk") {
-        match exec(cmd_in(repo_path, "tbdflow sync")) {
-          Ok(out) => last_output = out,
-          Err(e)  => last_output = "Sync failed: " + e
+        match exec(cmd_in(repo_path, "tbdflow --json sync")) {
+          Ok(raw) => {
+            log    = parse_sync_commits(raw)
+            status = load_status(repo_path)
+          },
+          Err(_) => { }
         }
       }
 

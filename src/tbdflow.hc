@@ -155,9 +155,40 @@ pub struct IntentLog {
 }
 
 pub fun load_log(path: string) {
-  match exec(cmd_in(path, "git log --pretty=format:\"%h|%s|%an|%ar\" -25")) {
+  match exec(cmd_in(path, "tbdflow --json sync")) {
     Err(_) => [],
-    Ok(raw) => parse_log_lines(split(trim(raw), "\n"))
+    Ok(raw) => parse_sync_commits(raw)
+  }
+}
+
+pub fun parse_sync_commits(text: string) {
+  let data = parse_json(text).json_ok.at("data")
+  extract_commits(data.at("commits"))
+}
+
+pub fun extract_commits(arr: maybe<Json>) {
+  match arr {
+    None    => [],
+    Some(j) => match json_array(j) {
+      None        => [],
+      Some(items) => parse_commit_items(items)
+    }
+  }
+}
+
+pub fun parse_commit_items(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => [parse_commit_item(x)] + parse_commit_items(rest)
+  }
+}
+
+pub fun parse_commit_item(j: Json) {
+  Commit {
+    hash:     Some(j).at("hash").str_or(""),
+    subject:  Some(j).at("subject").str_or(""),
+    author:   Some(j).at("author").str_or(""),
+    when_str: Some(j).at("relative_time").str_or("")
   }
 }
 
@@ -260,26 +291,4 @@ pub fun count_json_array(arr: maybe<Json>) {
 
 pub fun cmd_in(path: string, cmd: string) {
   if path != "" { "cd \"" + path + "\" && " + cmd } else { cmd }
-}
-
-pub fun parse_log_lines(lines: list<string>) {
-  match lines {
-    [] => [],
-    [line, ..rest] =>
-      if line == "" {
-        parse_log_lines(rest)
-      } else {
-        [parse_commit_line(line)] + parse_log_lines(rest)
-      }
-  }
-}
-
-pub fun parse_commit_line(line: string) {
-  let parts = split(line, "|")
-  Commit {
-    hash:     nth_str(parts, 0),
-    subject:  nth_str(parts, 1),
-    author:   nth_str(parts, 2),
-    when_str: nth_str(parts, 3)
-  }
 }
