@@ -74,19 +74,64 @@ fun render_log_entry(c: Commit, repo_url: string) {
   gui_spacing()
 }
 
+// Returns true if this note is an automated pre-sync safety snapshot.
+fun is_snapshot(n: Note) {
+  n.text == "Pre-sync safety snapshot"
+}
+
+// Returns true if any note in the list is a snapshot.
+fun any_snapshot(notes: list<Note>) {
+  match notes {
+    []           => false,
+    [n, ..rest]  => if is_snapshot(n) { true } else { any_snapshot(rest) }
+  }
+}
+
+// Keeps only the last snapshot entry; removes all earlier duplicates.
+// Notes are chronological (oldest first), so the last one is the most recent.
+fun dedup_snapshots(notes: list<Note>) {
+  match notes {
+    [] => [],
+    [n, ..rest] =>
+      if is_snapshot(n) && any_snapshot(rest) {
+        dedup_snapshots(rest)
+      } else {
+        [n] + dedup_snapshots(rest)
+      }
+  }
+}
+
 fun render_intent_log(il: IntentLog) {
   if il.has_active_task {
     gui_text_colored("● Task: " + il.task_description, 0.23, 0.51, 0.96, 1.0)
     gui_spacing()
   }
-  if length(il.notes) == 0 {
+  let notes = dedup_snapshots(il.notes)
+  if length(notes) == 0 {
     label("no notes yet")
   } else {
-    for n in il.notes {
+    for n in notes {
       label(short_time(n.timestamp))
       gui_same_line()
       gui_text_wrapped(n.text)
     }
+  }
+}
+
+// Red → yellow gradient based on change count.
+// 1 change = yellow, 5+ changes = red.
+fun render_hotspot_entry(h: Hotspot) {
+  let text = "• " + h.file + " (" + show(h.changes_count) + ")"
+  if h.changes_count >= 5 {
+    gui_text_colored(text, 0.94, 0.20, 0.20, 1.0)
+  } else if h.changes_count == 4 {
+    gui_text_colored(text, 0.96, 0.45, 0.10, 1.0)
+  } else if h.changes_count == 3 {
+    gui_text_colored(text, 0.97, 0.65, 0.07, 1.0)
+  } else if h.changes_count == 2 {
+    gui_text_colored(text, 0.98, 0.80, 0.05, 1.0)
+  } else {
+    gui_text_colored(text, 0.97, 0.93, 0.08, 1.0)
   }
 }
 
@@ -132,7 +177,7 @@ fun render_awareness(i: Config, s: Status, r: Radar) {
     gui_text("none")
   } else {
     for h in r.hotspots {
-      gui_bullet_text(h.file + " (" + show(h.changes_count) + ")")
+      render_hotspot_entry(h)
     }
   }
 
