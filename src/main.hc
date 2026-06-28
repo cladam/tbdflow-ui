@@ -19,7 +19,6 @@ fun apply_default_theme() {
   gui_set_style_window_padding(14.0, 12.0)
   gui_set_style_spacing(8.0, 6.0, 18.0)
   gui_set_style_borders(1.0, 0.0)
-
 }
 
 // Dim label header — stands in for gui_text_disabled (not in API)
@@ -36,7 +35,7 @@ fun format_mins(mins: int) {
 }
 
 fun truncate(s: string, n: int) {
-  if length(s) > n { s[0:n] + "…" } else { s }
+  if length(s) > n { s[0:n] + "..." } else { s }
 }
 
 fun short_time(ts: string) {
@@ -57,6 +56,25 @@ fun render_sidebar_context(i: Config, s: Status) {
 
   label("Trunk target")
   gui_text(i.main_branch)
+  gui_spacing()
+  gui_separator()
+  gui_spacing()
+
+  label("CI Status:")
+  gui_same_line()
+  if i.ci_check_enabled {
+    gui_text_colored("- Enabled", 0.06, 0.71, 0.65, 1.0)
+  } else {
+    gui_text_colored("o Disabled", 0.94, 0.33, 0.31, 1.0)
+  }
+
+  label("Radar:")
+  gui_same_line()
+  if i.radar_enabled {
+    gui_text_colored("- Active", 0.06, 0.71, 0.65, 1.0)
+  } else {
+    gui_text_colored("o Off", 0.94, 0.33, 0.31, 1.0)
+  }
 }
 
 fun render_log_entry(c: Commit, repo_url: string) {
@@ -70,7 +88,7 @@ fun render_log_entry(c: Commit, repo_url: string) {
   }
   gui_same_line()
   gui_text(truncate(c.subject, 72))
-  label(c.author + " · " + c.when_str)
+  label(c.author + " - " + c.when_str)
   gui_spacing()
 }
 
@@ -88,7 +106,6 @@ fun any_snapshot(notes: list<Note>) {
 }
 
 // Keeps only the last snapshot entry; removes all earlier duplicates.
-// Notes are chronological (oldest first), so the last one is the most recent.
 fun dedup_snapshots(notes: list<Note>) {
   match notes {
     [] => [],
@@ -103,7 +120,7 @@ fun dedup_snapshots(notes: list<Note>) {
 
 fun render_intent_log(il: IntentLog) {
   if il.has_active_task {
-    gui_text_colored("● Task: " + il.task_description, 0.23, 0.51, 0.96, 1.0)
+    gui_text_colored("Task: " + il.task_description, 0.23, 0.51, 0.96, 1.0)
     gui_spacing()
   }
   let notes = dedup_snapshots(il.notes)
@@ -118,10 +135,10 @@ fun render_intent_log(il: IntentLog) {
   }
 }
 
-// Red → yellow gradient based on change count.
+// Red to yellow gradient based on change count.
 // 1 change = yellow, 5+ changes = red.
 fun render_hotspot_entry(h: Hotspot) {
-  let text = "• " + h.file + " (" + show(h.changes_count) + ")"
+  let text = "- " + h.file + " (" + show(h.changes_count) + ")"
   if h.changes_count >= 5 {
     gui_text_colored(text, 0.94, 0.20, 0.20, 1.0)
   } else if h.changes_count == 4 {
@@ -140,9 +157,9 @@ fun render_awareness(i: Config, s: Status, r: Radar) {
   gui_text(r.trunk_branch)
   gui_same_line()
   if r.trunk_status == "green" {
-    gui_text_colored("● " + r.trunk_status, 0.06, 0.71, 0.65, 1.0)
+    gui_text_colored("- " + r.trunk_status, 0.06, 0.71, 0.65, 1.0)
   } else {
-    gui_text_colored("● " + r.trunk_status, 0.94, 0.33, 0.31, 1.0)
+    gui_text_colored("- " + r.trunk_status, 0.94, 0.33, 0.31, 1.0)
   }
   label("Last integrated")
   gui_text(format_mins(r.last_integrated_mins))
@@ -151,17 +168,17 @@ fun render_awareness(i: Config, s: Status, r: Radar) {
   label("CI")
   gui_same_line()
   if i.ci_check_enabled {
-    gui_text_colored("● Enabled", 0.06, 0.71, 0.65, 1.0)
+    gui_text_colored("- Enabled", 0.06, 0.71, 0.65, 1.0)
   } else {
-    gui_text_colored("○ Disabled", 0.94, 0.33, 0.31, 1.0)
+    gui_text_colored("o Disabled", 0.94, 0.33, 0.31, 1.0)
   }
   if s.trunk_ci != "unknown" && s.trunk_ci != "" {
     gui_text_wrapped(s.trunk_ci)
   }
   gui_spacing()
 
-  label("Ahead / Behind")
-  gui_text(show(s.ahead) + " / " + show(s.commits_behind))
+  label("Trunk Proximity")
+  gui_text("Ahead: " + show(s.ahead) + "  Behind: " + show(s.commits_behind))
   gui_spacing()
   gui_separator()
   gui_spacing()
@@ -185,7 +202,7 @@ fun render_awareness(i: Config, s: Status, r: Radar) {
     gui_spacing()
     gui_separator()
     gui_spacing()
-    gui_text_colored("⚠ WIP Changes", 0.94, 0.33, 0.31, 1.0)
+    gui_text_colored("WIP Changes", 0.94, 0.33, 0.31, 1.0)
     gui_spacing()
     for f in s.changed_files {
       gui_text(f)
@@ -212,10 +229,12 @@ fun main() {
   var notes_log = ""
   var intent_log = None
   var radar = None
-  var use_tbdflow_theme = true
+  var theme_idx = 0
 
   gui_window("tbdflow-ui", 1100, 720, () => {
-    if use_tbdflow_theme { apply_theme() } else { apply_default_theme() }
+    if theme_idx == 0 { apply_theme() }
+    else if theme_idx == 1 { apply_default_theme() }
+    else { apply_one_dark_theme() }
 
     gui_main_menu(() => {
       gui_menu("Settings", () => {
@@ -226,13 +245,17 @@ fun main() {
           }
         }
         gui_separator()
-        let mark1 = if use_tbdflow_theme { "✓ " } else { "  " }
-        if gui_menu_item(mark1 + "tbdflow Theme") {
-          use_tbdflow_theme = true
+        let m0 = if theme_idx == 0 { "\u2713 " } else { "  " }
+        if gui_menu_item(m0 + "tbdflow Theme") {
+          theme_idx = 0
         }
-        let mark2 = if !use_tbdflow_theme { "✓ " } else { "  " }
-        if gui_menu_item(mark2 + "Default hica Theme") {
-          use_tbdflow_theme = false
+        let m1 = if theme_idx == 1 { "\u2713 " } else { "  " }
+        if gui_menu_item(m1 + "Default hica Theme") {
+          theme_idx = 1
+        }
+        let m2 = if theme_idx == 2 { "\u2713 " } else { "  " }
+        if gui_menu_item(m2 + "One Dark Pro") {
+          theme_idx = 2
         }
       })
     })
@@ -250,7 +273,7 @@ fun main() {
     // Push content below the main menu bar overlay.
     gui_dummy(0.0, 12.0)
 
-    // ── Left: Context ───
+    // Left: Context
     gui_child("##left", 200.0, 418.0, () => {
       gui_text_colored("tbdflow-ui", 0.23, 0.51, 0.96, 1.0)
       gui_separator()
@@ -262,7 +285,7 @@ fun main() {
         gui_text_wrapped(repo_path)
       }
       gui_spacing()
-      if gui_button("Browse…") {
+      if gui_button("Browse...") {
         match exec("osascript -e 'POSIX path of (choose folder)'") {
           Ok(picked) => {
             let parts = split(picked, "\n")
@@ -292,7 +315,7 @@ fun main() {
 
     gui_same_line()
 
-    // ── Centre: Workflow ──
+    // Centre: Workflow
     gui_child("##center", 500.0, 418.0, () => {
       gui_spacing()
 
@@ -302,7 +325,7 @@ fun main() {
             log    = parse_sync_commits(raw)
             status = load_status(repo_path)
           },
-          Err(_) => { }
+          Err(e) => last_output = "Sync failed: " + e
         }
       }
 
@@ -381,7 +404,7 @@ fun main() {
 
     gui_same_line()
 
-    // ── Right: Awareness ──
+    // Right: Awareness
     gui_child("##right", 0.0, 418.0, () => {
       label("AWARENESS")
       gui_separator()
@@ -389,16 +412,16 @@ fun main() {
       match info {
         None    => gui_text("No data"),
         Some(i) => match status {
-          None    => gui_text("Loading…"),
+          None    => gui_text("Loading..."),
           Some(s) => match radar {
-            None    => gui_text("Loading…"),
+            None    => gui_text("Loading..."),
             Some(r) => render_awareness(i, s, r)
           }
         }
       }
     })
 
-    // ── Bottom: Recent Commits (full width) ──
+    // Bottom: Recent Commits (full width)
     gui_child("##bottom", 0.0, 0.0, () => {
       label("Recent Commits")
       gui_separator()

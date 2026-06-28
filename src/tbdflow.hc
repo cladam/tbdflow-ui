@@ -126,41 +126,40 @@ pub struct Commit {
   when_str: string
 }
 
-pub struct Hotspot {
-  file: string,
-  changes_count: int
-}
-
-pub struct Radar {
-  trunk_branch: string,
-  trunk_status: string,
-  last_integrated_mins: int,
-  branches_scanned: int,
-  local_files_count: int,
-  overlap_count: int,
-  hotspots: list<Hotspot>
-}
-
-pub struct Note {
-  timestamp: string,
-  text: string,
-  snapshot_hash: string
-}
-
-pub struct IntentLog {
-  has_active_task: bool,
-  task_description: string,
-  branch_context: string,
-  notes: list<Note>
-}
-
 pub fun load_log(path: string) {
-  match exec(cmd_in(path, "tbdflow --json sync")) {
+  match exec(cmd_in(path, "git log --pretty=format:\"%h|%s|%an|%ar\" -25")) {
     Err(_) => [],
-    Ok(raw) => parse_sync_commits(raw)
+    Ok(raw) => parse_log_lines(split(trim(raw), "\n"))
   }
 }
 
+pub fun cmd_in(path: string, cmd: string) {
+  if path != "" { "cd \"" + path + "\" && " + cmd } else { cmd }
+}
+
+pub fun parse_log_lines(lines: list<string>) {
+  match lines {
+    [] => [],
+    [line, ..rest] =>
+      if line == "" {
+        parse_log_lines(rest)
+      } else {
+        [parse_commit_line(line)] + parse_log_lines(rest)
+      }
+  }
+}
+
+pub fun parse_commit_line(line: string) {
+  let parts = split(line, "|")
+  Commit {
+    hash:     nth_str(parts, 0),
+    subject:  nth_str(parts, 1),
+    author:   nth_str(parts, 2),
+    when_str: nth_str(parts, 3)
+  }
+}
+
+// Parse commits from tbdflow --json sync output (used by Sync button).
 pub fun parse_sync_commits(text: string) {
   let data = parse_json(text).json_ok.at("data")
   extract_commits(data.at("commits"))
@@ -190,6 +189,34 @@ pub fun parse_commit_item(j: Json) {
     author:   Some(j).at("author").str_or(""),
     when_str: Some(j).at("relative_time").str_or("")
   }
+}
+
+pub struct Hotspot {
+  file: string,
+  changes_count: int
+}
+
+pub struct Radar {
+  trunk_branch: string,
+  trunk_status: string,
+  last_integrated_mins: int,
+  branches_scanned: int,
+  local_files_count: int,
+  overlap_count: int,
+  hotspots: list<Hotspot>
+}
+
+pub struct Note {
+  timestamp: string,
+  text: string,
+  snapshot_hash: string
+}
+
+pub struct IntentLog {
+  has_active_task: bool,
+  task_description: string,
+  branch_context: string,
+  notes: list<Note>
 }
 
 pub fun load_intent_log(path: string) {
@@ -287,8 +314,4 @@ pub fun count_json_array(arr: maybe<Json>) {
       Some(items) => length(items)
     }
   }
-}
-
-pub fun cmd_in(path: string, cmd: string) {
-  if path != "" { "cd \"" + path + "\" && " + cmd } else { cmd }
 }

@@ -30,3 +30,21 @@ pub fun apply_theme() {
   gui_set_style_spacing(8.0, 6.0, 16.0)            // Intentional layout rhythm
   gui_set_style_borders(1.0, 1.0)                  // Crisp alignment outlines enabled across panels
 }
+
+// One Dark Pro
+// Colors sourced directly from github.com/Binaryify/OneDark-Pro
+pub fun apply_one_dark_theme() {
+  gui_set_color_text(0.843, 0.855, 0.878)           // #d7dae0  activityBar.foreground / list active text
+  gui_set_color_bg(0.157, 0.173, 0.204)             // #282c34  editor.background
+  gui_set_color_surface(0.114, 0.122, 0.137)        // #1d1f23  input.background
+  gui_set_color_border(0.243, 0.267, 0.322)         // #3e4452  panel.border
+  gui_set_color_accent(0.302, 0.471, 0.800)         // #4d78cc  activityBarBadge / remoteBackground
+  gui_set_color_plot(0.596, 0.765, 0.475)           // #98c379  string green — healthy trunk
+  gui_set_color_plot_bar(0.878, 0.424, 0.459)       // #e06c75  deleted / error red
+  gui_set_color_modal_dim(0.50)
+  gui_set_style_rounding(6.0, 4.0, 4.0)
+  gui_set_style_padding(6.0, 4.0)
+  gui_set_style_window_padding(12.0, 12.0)
+  gui_set_style_spacing(8.0, 6.0, 16.0)
+  gui_set_style_borders(1.0, 1.0)
+}
