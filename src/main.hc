@@ -151,18 +151,33 @@ fun render_hotspot_entry(h: Hotspot) {
   }
 }
 
-fun render_awareness(s: Status, r: Radar) {
-  label("Trunk")
-  gui_text(r.trunk_branch)
+fun capitalize_status(s: string) {
+  if s == "green"   { "Green"   }
+  else if s == "red"     { "Red"     }
+  else if s == "pending" { "Pending" }
+  else { s }
+}
+
+fun render_awareness(r: Radar) {
+  label("Trunk Status")
+  gui_separator()
+  gui_spacing()
+  gui_text(r.trunk_branch + " is ")
   gui_same_line()
   if r.trunk_status == "green" {
-    gui_text_colored("● " + r.trunk_status, 0.06, 0.71, 0.65, 1.0)
+    gui_text_colored(capitalize_status(r.trunk_status), 0.06, 0.71, 0.65, 1.0)
+  } else if r.trunk_status == "pending" {
+    gui_text_colored(capitalize_status(r.trunk_status), 0.98, 0.80, 0.05, 1.0)
   } else {
-    gui_text_colored("● " + r.trunk_status, 0.94, 0.33, 0.31, 1.0)
+    gui_text_colored(capitalize_status(r.trunk_status), 0.94, 0.33, 0.31, 1.0)
   }
+  gui_same_line()
+  label("(Last integrated " + format_mins(r.last_integrated_mins) + ")")
   gui_spacing()
 
-  label("Hotspots")
+  label("Hotspots (Last 3 days)")
+  gui_separator()
+  gui_spacing()
   if length(r.hotspots) == 0 {
     gui_text("none")
   } else {
@@ -170,16 +185,15 @@ fun render_awareness(s: Status, r: Radar) {
       render_hotspot_entry(h)
     }
   }
+  gui_spacing()
 
-  if !s.is_clean {
-    gui_spacing()
-    gui_separator()
-    gui_spacing()
-    gui_text_colored("WIP Changes", 0.94, 0.33, 0.31, 1.0)
-    gui_spacing()
-    for f in s.changed_files {
-      gui_text(f)
-    }
+  label("Overlapping work")
+  gui_separator()
+  gui_spacing()
+  if r.local_files_count == 0 {
+    gui_text("No local changes detected")
+  } else {
+    gui_text(show(r.overlap_count) + " overlaps across " + show(r.branches_scanned) + " branches")
   }
 }
 
@@ -221,7 +235,7 @@ fun render_author_buttons(authors: list<string>) {
 }
 
 fun render_right_panel(s: Status, r: Radar, commits: list<Commit>) {
-  render_awareness(s, r)
+  render_awareness(r)
   if length(commits) > 0 {
     gui_spacing()
     gui_separator()
@@ -431,9 +445,8 @@ fun main() {
 
     gui_same_line()
 
-    // Right: Awareness
     gui_child("##right", 0.0, 418.0, () => {
-      label("AWARENESS")
+      label("Repo Awareness")
       gui_separator()
       gui_spacing()
       match info {
