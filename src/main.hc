@@ -80,15 +80,14 @@ fun render_sidebar_context(i: Config, s: Status) {
 fun render_log_entry(c: Commit, repo_url: string) {
   if gui_selectable(c.hash, false) {
     if repo_url != "" {
-      match exec("open " + repo_url + "/commit/" + c.hash) {
-        Ok(_) => { },
-        Err(_) => { }
-      }
+      gui_open_url(repo_url + "/commit/" + c.hash)
     }
   }
   gui_same_line()
   gui_text(truncate(c.subject, 72))
-  label(c.author + " - " + c.when_str)
+  gui_hyperlink(c.author + "##auth_" + c.hash, "https://github.com/" + c.author)
+  gui_same_line()
+  label("· " + c.when_str)
   gui_spacing()
 }
 
@@ -138,7 +137,7 @@ fun render_intent_log(il: IntentLog) {
 // Red to yellow gradient based on change count.
 // 1 change = yellow, 5+ changes = red.
 fun render_hotspot_entry(h: Hotspot) {
-  let text = "- " + h.file + " (" + show(h.changes_count) + ")"
+  let text = "• " + h.file + " (" + show(h.changes_count) + ")"
   if h.changes_count >= 5 {
     gui_text_colored(text, 0.94, 0.20, 0.20, 1.0)
   } else if h.changes_count == 4 {
@@ -152,43 +151,17 @@ fun render_hotspot_entry(h: Hotspot) {
   }
 }
 
-fun render_awareness(i: Config, s: Status, r: Radar) {
+fun render_awareness(s: Status, r: Radar) {
   label("Trunk")
   gui_text(r.trunk_branch)
   gui_same_line()
   if r.trunk_status == "green" {
-    gui_text_colored("- " + r.trunk_status, 0.06, 0.71, 0.65, 1.0)
+    gui_text_colored("● " + r.trunk_status, 0.06, 0.71, 0.65, 1.0)
   } else {
-    gui_text_colored("- " + r.trunk_status, 0.94, 0.33, 0.31, 1.0)
-  }
-  label("Last integrated")
-  gui_text(format_mins(r.last_integrated_mins))
-  gui_spacing()
-
-  label("CI")
-  gui_same_line()
-  if i.ci_check_enabled {
-    gui_text_colored("- Enabled", 0.06, 0.71, 0.65, 1.0)
-  } else {
-    gui_text_colored("o Disabled", 0.94, 0.33, 0.31, 1.0)
-  }
-  if s.trunk_ci != "unknown" && s.trunk_ci != "" {
-    gui_text_wrapped(s.trunk_ci)
+    gui_text_colored("● " + r.trunk_status, 0.94, 0.33, 0.31, 1.0)
   }
   gui_spacing()
 
-  label("Trunk Proximity")
-  gui_text("Ahead: " + show(s.ahead) + "  Behind: " + show(s.commits_behind))
-  gui_spacing()
-  gui_separator()
-  gui_spacing()
-
-  label("Branches scanned")
-  gui_text(show(r.branches_scanned))
-  gui_spacing()
-  label("Overlaps")
-  gui_text(show(r.overlap_count))
-  gui_spacing()
   label("Hotspots")
   if length(r.hotspots) == 0 {
     gui_text("none")
@@ -206,6 +179,60 @@ fun render_awareness(i: Config, s: Status, r: Radar) {
     gui_spacing()
     for f in s.changed_files {
       gui_text(f)
+    }
+  }
+}
+
+fun take_commits(items: list<Commit>, n: int) {
+  if n == 0 { [] }
+  else {
+    match items {
+      []           => [],
+      [c, ..rest]  => [c] + take_commits(rest, n - 1)
+    }
+  }
+}
+
+fun str_in_list(xs: list<string>, s: string) {
+  match xs {
+    []          => false,
+    [h, ..rest] => if h == s { true } else { str_in_list(rest, s) }
+  }
+}
+
+fun unique_authors(cs: list<Commit>) {
+  match cs {
+    []          => [],
+    [c, ..rest] =>
+      let others = unique_authors(rest)
+      if str_in_list(others, c.author) { others } else { [c.author] + others }
+  }
+}
+
+fun render_author_buttons(authors: list<string>) {
+  match authors {
+    [] => { }
+    [a, ..rest] => {
+      gui_same_line()
+      gui_hyperlink(a + "##aw_" + a, "https://github.com/" + a)
+      render_author_buttons(rest)
+    }
+  }
+}
+
+fun render_right_panel(s: Status, r: Radar, commits: list<Commit>) {
+  render_awareness(s, r)
+  if length(commits) > 0 {
+    gui_spacing()
+    gui_separator()
+    gui_spacing()
+    label("Recent Commits")
+    gui_spacing()
+    let recent = take_commits(commits, 5)
+    let authors = unique_authors(recent)
+    if length(authors) > 0 {
+      gui_text("Latest commits by")
+      render_author_buttons(authors)
     }
   }
 }
@@ -411,11 +438,11 @@ fun main() {
       gui_spacing()
       match info {
         None    => gui_text("No data"),
-        Some(i) => match status {
+        Some(_) => match status {
           None    => gui_text("Loading..."),
           Some(s) => match radar {
             None    => gui_text("Loading..."),
-            Some(r) => render_awareness(i, s, r)
+            Some(r) => render_right_panel(s, r, log)
           }
         }
       }
