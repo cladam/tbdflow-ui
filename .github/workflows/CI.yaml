@@ -114,6 +114,10 @@ jobs:
       - name: Build binary
         run: hica build -o ${{ matrix.artifact }}
 
+      - name: Ad-hoc codesign (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --sign - --force ${{ matrix.artifact }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
