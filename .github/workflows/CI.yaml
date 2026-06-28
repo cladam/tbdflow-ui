@@ -111,10 +111,7 @@ jobs:
           sed -i 's|--cclinkopts=-framework --cclinkopts=OpenGL|--cclinkopts=-lGL|g' hica.hml
 
       - name: Build binary
-        run: hica build
-
-      - name: Rename binary
-        run: mv src/main ${{ matrix.artifact }}
+        run: hica build -o ${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
