@@ -9,6 +9,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/tbdflow.svg)](https://crates.io/crates/tbdflow)
 [![Downloads](https://img.shields.io/crates/d/tbdflow.svg)](https://crates.io/crates/tbdflow)
+[![Release](https://img.shields.io/github/v/release/cladam/tbdflow-ui)](https://github.com/cladam/tbdflow-ui/releases/latest)
 
 </div>
 
@@ -48,13 +49,24 @@ A persistent three-panel window that sits alongside your editor and surfaces the
 
 All data is read via `tbdflow`'s `--json` output mode. No direct Git access, `tbdflow-ui` delegates everything to the CLI.
 
+## Install
+
+```sh
+curl -fsSL https://github.com/cladam/tbdflow-ui/releases/latest/download/install.sh | sh
+```
+
+This downloads the pre-built binary for your platform (`macos-arm64` or `linux-x86_64`) and installs it to `~/.local/bin`. Override the install directory with `TBDFLOW_INSTALL_DIR`:
+
+```sh
+TBDFLOW_INSTALL_DIR=/usr/local/bin curl -fsSL https://github.com/cladam/tbdflow-ui/releases/latest/download/install.sh | sh
+```
+
 ## Prerequisites
 
 - [tbdflow](https://github.com/cladam/tbdflow) v0.33.0 or later on `PATH`
-- [hica](https://www.hica.dev) on `PATH`
-- SDL2: `brew install sdl2`
+- SDL2: `brew install sdl2` (macOS) or `sudo apt-get install libsdl2-dev` (Linux)
 
-## Build and run
+## Build from source
 
 ```sh
 hica run     # compile and launch
@@ -62,6 +74,8 @@ hica build   # compile to binary only
 hica check   # type-check without emitting
 hica clean   # remove generated files
 ```
+
+Requires [hica](https://www.hica.dev) on `PATH`.
 
 ## Philosophy
 
