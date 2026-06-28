@@ -1,6 +1,6 @@
 @project {
     name: "tbdflow-ui"
-    version: "0.3.4"
+    version: "0.3.5"
     license: "MIT"
     entry: "src/main.hc"
 }
@@ -19,5 +19,5 @@
 
 @koka {
     include: "src"
-    flags: "--cclinkopts=-Llib --cclinkopts=-L/opt/homebrew/opt/sdl2/lib --cclib=imgui_hica --cclib=SDL2 --cclinkopts=-lc++ --cclinkopts=-framework --cclinkopts=OpenGL"
+    flags: "--cclinkopts=-Llib --cclinkopts=-L/opt/homebrew/opt/sdl2/lib --cclinkopts=-limgui_hica --cclinkopts=-lSDL2 --cclinkopts=-lc++ --cclinkopts=-framework --cclinkopts=OpenGL"
 }
