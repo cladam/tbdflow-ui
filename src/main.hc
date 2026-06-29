@@ -492,23 +492,26 @@ fun main() {
           gui_spacing()
           let repo_url = match info { None => "", Some(i) => i.remote_url }
           for c in log {
-            if gui_raw_color_button("U##u_" + c.hash, 0.95, 0.45, 0.32, 1.0, 20.0, 0.0) {
-              undo_pending_sha = c.hash
-              gui_open_popup("##undo_confirm")
-            }
-            gui_tooltip("Undo this commit")
-            gui_same_line()
-            if gui_selectable(c.hash, false) {
-              if repo_url != "" {
-                gui_open_url(repo_url + "/commit/" + c.hash)
-              }
-            }
-            gui_same_line()
-            gui_text(truncate(c.subject, 70))
-            gui_hyperlink(c.author + "##auth_" + c.hash, "https://github.com/" + c.author)
-            gui_same_line()
-            label("· " + c.when_str)
-            gui_spacing()
+            render_log_entry(c, repo_url)
+
+            //if gui_selectable(c.hash, false) {
+            //  if repo_url != "" {
+            //    gui_open_url(repo_url + "/commit/" + c.hash)
+            //  }
+            //}
+            //gui_same_line()
+            //gui_text(truncate(c.subject, 70))
+            //gui_hyperlink(c.author + "##auth_" + c.hash, "https://github.com/" + c.author)
+            //gui_same_line()
+            //label("· " + c.when_str)
+            //gui_same_line()
+            //if gui_button_colored("Undo##u_" + c.hash, 0.937, 0.325, 0.310, 0.055, 0.071, 0.106) {
+            //  undo_pending_sha = c.hash
+            //  gui_open_popup("##undo_confirm")
+            //}
+            //gui_tooltip("Revert this commit on trunk")
+            //gui_spacing()
+//
           }
         })
         gui_tab("Undo Commit", () => {
