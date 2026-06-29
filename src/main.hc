@@ -83,6 +83,9 @@ fun render_log_entry(c: Commit, repo_url: string) {
       gui_open_url(repo_url + "/commit/" + c.hash)
     }
   }
+  if repo_url != "" {
+    gui_tooltip("Browse this commit")
+  }
   gui_same_line()
   gui_text(truncate(c.subject, 72))
   gui_hyperlink(c.author + "##auth_" + c.hash, "https://github.com/" + c.author)
@@ -131,7 +134,10 @@ fun render_intent_log(il: IntentLog) {
       gui_same_line()
       gui_text_wrapped(n.text)
       if n.snapshot_hash != "" {
-        label("  " + truncate(n.snapshot_hash, 8))
+        if gui_selectable(n.snapshot_hash + "##snap_" + n.snapshot_hash, false) {
+          gui_set_clipboard(n.snapshot_hash)
+        }
+        gui_tooltip("Click to copy hash")
       }
     }
   }
@@ -380,46 +386,53 @@ fun main() {
       gui_separator()
       gui_spacing()
 
-      label("Intent Log")
-      gui_spacing()
-      note_text = gui_input_text("##note" + show(note_input_id), 256)
-      gui_same_line()
-      if gui_button("Add Note") {
-        if note_text != "" {
-          match exec(cmd_in(repo_path, "tbdflow note \"" + note_text + "\"")) {
-            Ok(_) => {
-              note_input_id = note_input_id + 1
-              intent_log = load_intent_log(repo_path)
-            },
-            Err(_) => { }
-          }
-        }
-      }
-      if notes_log != "" {
-        gui_spacing()
-        gui_text_wrapped(notes_log)
-      }
-      match intent_log {
-        None     => { },
-        Some(il) => {
+      gui_tab_bar("##intent_tabs", () => {
+        gui_tab("Intent Log", () => {
           gui_spacing()
-          render_intent_log(il)
-        }
-      }
-      gui_spacing()
-      let rhash = gui_input_text("Restore snapshot##rhash" + show(recover_idx_input_id), 48)
-      gui_same_line()
-      if gui_button("Recover##rcvr") {
-        if rhash != "" {
-          match exec(cmd_in(repo_path, "tbdflow recover " + rhash)) {
-            Ok(out) => {
-              last_output = out
-              recover_idx_input_id = recover_idx_input_id + 1
-            },
-            Err(e) => last_output = "Recover failed: " + e
+          note_text = gui_input_text("##note" + show(note_input_id), 256)
+          gui_same_line()
+          if gui_button("Add Note") {
+            if note_text != "" {
+              match exec(cmd_in(repo_path, "tbdflow note \"" + note_text + "\"")) {
+                Ok(_) => {
+                  note_input_id = note_input_id + 1
+                  intent_log = load_intent_log(repo_path)
+                },
+                Err(_) => { }
+              }
+            }
           }
-        }
-      }
+          if notes_log != "" {
+            gui_spacing()
+            gui_text_wrapped(notes_log)
+          }
+          match intent_log {
+            None     => { },
+            Some(il) => {
+              gui_spacing()
+              render_intent_log(il)
+            }
+          }
+        })
+        gui_tab("Recover", () => {
+          gui_spacing()
+          gui_text_wrapped("Restores a WIP snapshot by hash or index number.")
+          gui_spacing()
+          let rhash = gui_input_text("Hash or index##rhash" + show(recover_idx_input_id), 48)
+          gui_same_line()
+          if gui_button("Recover##rcvr") {
+            if rhash != "" {
+              match exec(cmd_in(repo_path, "tbdflow recover " + rhash)) {
+                Ok(out) => {
+                  last_output = out
+                  recover_idx_input_id = recover_idx_input_id + 1
+                },
+                Err(e) => last_output = "Recover failed: " + e
+              }
+            }
+          }
+        })
+      })
 
       gui_spacing()
       gui_separator()
@@ -493,25 +506,6 @@ fun main() {
           let repo_url = match info { None => "", Some(i) => i.remote_url }
           for c in log {
             render_log_entry(c, repo_url)
-
-            //if gui_selectable(c.hash, false) {
-            //  if repo_url != "" {
-            //    gui_open_url(repo_url + "/commit/" + c.hash)
-            //  }
-            //}
-            //gui_same_line()
-            //gui_text(truncate(c.subject, 70))
-            //gui_hyperlink(c.author + "##auth_" + c.hash, "https://github.com/" + c.author)
-            //gui_same_line()
-            //label("· " + c.when_str)
-            //gui_same_line()
-            //if gui_button_colored("Undo##u_" + c.hash, 0.937, 0.325, 0.310, 0.055, 0.071, 0.106) {
-            //  undo_pending_sha = c.hash
-            //  gui_open_popup("##undo_confirm")
-            //}
-            //gui_tooltip("Revert this commit on trunk")
-            //gui_spacing()
-//
           }
         })
         gui_tab("Undo Commit", () => {
