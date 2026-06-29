@@ -130,6 +130,9 @@ fun render_intent_log(il: IntentLog) {
       label(short_time(n.timestamp))
       gui_same_line()
       gui_text_wrapped(n.text)
+      if n.snapshot_hash != "" {
+        label("  " + truncate(n.snapshot_hash, 8))
+      }
     }
   }
 }
@@ -271,6 +274,9 @@ fun main() {
   var intent_log = None
   var radar = None
   var theme_idx = 0
+  var recover_idx_input_id = 0
+  var undo_sha_input_id = 0
+  var undo_pending_sha = ""
 
   gui_window("tbdflow-ui", 1100, 720, () => {
     if theme_idx == 0 { apply_theme() }
@@ -400,6 +406,20 @@ fun main() {
           render_intent_log(il)
         }
       }
+      gui_spacing()
+      let rhash = gui_input_text("Restore snapshot##rhash" + show(recover_idx_input_id), 48)
+      gui_same_line()
+      if gui_button("Recover##rcvr") {
+        if rhash != "" {
+          match exec(cmd_in(repo_path, "tbdflow recover " + rhash)) {
+            Ok(out) => {
+              last_output = out
+              recover_idx_input_id = recover_idx_input_id + 1
+            },
+            Err(e) => last_output = "Recover failed: " + e
+          }
+        }
+      }
 
       gui_spacing()
       gui_separator()
@@ -461,14 +481,72 @@ fun main() {
       }
     })
 
-    // Bottom: Recent Commits (full width)
+    // Bottom: tabbed area (full width)
     gui_child("##bottom", 0.0, 0.0, () => {
-      label("Recent Commits")
-      gui_separator()
+      if last_output != "" {
+        label(truncate(last_output, 110))
+        gui_separator()
+      }
+      gui_tab_bar("##bottom_tabs", () => {
+        gui_tab("Recent Commits", () => {
+          gui_spacing()
+          let repo_url = match info { None => "", Some(i) => i.remote_url }
+          for c in log {
+            if gui_raw_color_button("U##u_" + c.hash, 0.95, 0.45, 0.32, 1.0, 20.0, 0.0) {
+              undo_pending_sha = c.hash
+              gui_open_popup("##undo_confirm")
+            }
+            gui_tooltip("Undo this commit")
+            gui_same_line()
+            if gui_selectable(c.hash, false) {
+              if repo_url != "" {
+                gui_open_url(repo_url + "/commit/" + c.hash)
+              }
+            }
+            gui_same_line()
+            gui_text(truncate(c.subject, 70))
+            gui_hyperlink(c.author + "##auth_" + c.hash, "https://github.com/" + c.author)
+            gui_same_line()
+            label("· " + c.when_str)
+            gui_spacing()
+          }
+        })
+        gui_tab("Undo Commit", () => {
+          gui_spacing()
+          gui_text_wrapped("Reverts a commit on trunk by creating a new revert commit and pushing.")
+          gui_spacing()
+          let usha = gui_input_text("SHA##undosha" + show(undo_sha_input_id), 64)
+          gui_same_line()
+          if gui_button("Undo##btn") {
+            if usha != "" {
+              undo_pending_sha = usha
+              gui_open_popup("##undo_confirm")
+            }
+          }
+        })
+      })
+    })
+
+    gui_modal("##undo_confirm", () => {
+      gui_text("Revert commit " + undo_pending_sha + " on trunk?")
+      gui_text("This creates a new revert commit and pushes.")
       gui_spacing()
-      let repo_url = match info { None => "", Some(i) => i.remote_url }
-      for c in log {
-        render_log_entry(c, repo_url)
+      if gui_button("Confirm") {
+        match exec(cmd_in(repo_path, "tbdflow undo " + undo_pending_sha)) {
+          Ok(out) => {
+            last_output = out
+            log = load_log(repo_path)
+            undo_sha_input_id = undo_sha_input_id + 1
+          },
+          Err(e) => last_output = "Undo failed: " + e
+        }
+        undo_pending_sha = ""
+        gui_close_popup()
+      }
+      gui_same_line()
+      if gui_button("Cancel##ucnl") {
+        undo_pending_sha = ""
+        gui_close_popup()
       }
     })
   })

@@ -315,3 +315,48 @@ pub fun count_json_array(arr: maybe<Json>) {
     }
   }
 }
+
+pub struct Snapshot {
+  index: int,
+  timestamp: string,
+  note: string,
+  snap_hash: string
+}
+
+pub fun load_snapshots(path: string) {
+  match exec(cmd_in(path, "tbdflow --json recover --list")) {
+    Ok(raw) => parse_snapshots(raw),
+    Err(_)  => []
+  }
+}
+
+pub fun parse_snapshots(text: string) {
+  let data = parse_json(text).json_ok.at("data")
+  extract_snapshots(data.at("snapshots"))
+}
+
+pub fun extract_snapshots(arr: maybe<Json>) {
+  match arr {
+    None    => [],
+    Some(j) => match json_array(j) {
+      None        => [],
+      Some(items) => parse_snapshot_items(items)
+    }
+  }
+}
+
+pub fun parse_snapshot_items(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => [parse_snapshot_item(x)] + parse_snapshot_items(rest)
+  }
+}
+
+pub fun parse_snapshot_item(j: Json) {
+  Snapshot {
+    index:     Some(j).at("index").int_or(0),
+    timestamp: Some(j).at("timestamp").str_or(""),
+    note:      Some(j).at("note").str_or(""),
+    snap_hash: Some(j).at("hash").str_or("")
+  }
+}
