@@ -260,6 +260,16 @@ fun render_right_panel(s: Status, r: Radar, commits: list<Commit>) {
   }
 }
 
+fun render_changed_files(files: list<string>) {
+  match files {
+    [] => { }
+    [f, ..rest] => {
+      gui_text(f)
+      render_changed_files(rest)
+    }
+  }
+}
+
 fun main() {
   var info   = None
   var status = None
@@ -467,12 +477,28 @@ fun main() {
         if cmsg != "" && ctype != "" {
           let cmd = cmd_in(repo_path, build_commit_cmd(ctype, cmsg, opt_scope, opt_body, opt_tag, opt_issue, opt_breaking, opt_no_verify))
           match exec(cmd) {
-            Ok(out) => last_output = out,
+            Ok(out) => {
+              last_output = out
+              status = load_status(repo_path)
+            },
             Err(e)  => last_output = "Commit rejected: " + e
           }
         } else {
           last_output = "Type and message are required."
         }
+      }
+
+      match status {
+        None    => { }
+        Some(s) =>
+          if length(s.changed_files) > 0 {
+            gui_spacing()
+            gui_separator()
+            gui_spacing()
+            label("Modified Files")
+            gui_spacing()
+            render_changed_files(s.changed_files)
+          }
       }
     })
 
