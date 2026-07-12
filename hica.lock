@@ -2,10 +2,10 @@
 
 [[package]]
 name = "imgui"
-version = "latest"
-source = "registry+pkg.hica.dev@latest"
+version = "0.5.0"
+source = "registry+pkg.hica.dev@0.5.0"
 
 [[package]]
 name = "json"
-version = "latest"
-source = "registry+pkg.hica.dev@latest"
+version = "0.1.0"
+source = "registry+pkg.hica.dev@0.1.0"
