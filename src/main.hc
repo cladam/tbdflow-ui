@@ -50,6 +50,26 @@ fun render_sidebar_context(i: Config, s: Status) {
   gui_text(s.current_branch)
   gui_spacing()
 
+  label("Sync State")
+  if s.commits_behind > 0 && s.ahead > 0 {
+    let text = "Ahead " + show(s.ahead) + ", Behind " + show(s.commits_behind)
+    if !s.is_clean { gui_text_colored(text + " (dirty)", 0.98, 0.80, 0.05, 1.0) }
+    else { gui_text_colored(text, 0.98, 0.80, 0.05, 1.0) }
+  } else if s.commits_behind > 0 {
+    let text = "Behind trunk by " + show(s.commits_behind)
+    if !s.is_clean { gui_text_colored(text + " (dirty)", 0.94, 0.33, 0.31, 1.0) }
+    else { gui_text_colored(text, 0.94, 0.33, 0.31, 1.0) }
+  } else if s.ahead > 0 {
+    let text = "Ahead of trunk by " + show(s.ahead)
+    if !s.is_clean { gui_text_colored(text + " (dirty)", 0.98, 0.80, 0.05, 1.0) }
+    else { gui_text_colored(text, 0.06, 0.71, 0.65, 1.0) }
+  } else if !s.is_clean {
+    gui_text_colored("Local changes pending", 0.98, 0.80, 0.05, 1.0)
+  } else {
+    gui_text_colored("Up to date", 0.06, 0.71, 0.65, 1.0)
+  }
+  gui_spacing()
+
   label("Mode")
   gui_text(i.mode)
   gui_spacing()
@@ -167,6 +187,33 @@ fun capitalize_status(s: string) {
   else { s }
 }
 
+fun render_overlap_files(files: list<OverlapFile>) {
+  match files {
+    [] => { }
+    [f, ..rest] => {
+      if f.level == "line" {
+        gui_text_colored("  " + f.file + " [!!]", 0.94, 0.33, 0.31, 1.0)
+      } else {
+        gui_text_colored("  " + f.file + " [!]", 0.98, 0.80, 0.05, 1.0)
+      }
+      render_overlap_files(rest)
+    }
+  }
+}
+
+fun render_overlaps(overlaps: list<Overlap>) {
+  match overlaps {
+    [] => { }
+    [o, ..rest] => {
+      let ahead_str = if o.commits_ahead > 0 { ", " + show(o.commits_ahead) + " commits ahead" } else { "" }
+      gui_text(o.branch + " (by " + o.author + ahead_str + ")")
+      render_overlap_files(o.files)
+      gui_spacing()
+      render_overlaps(rest)
+    }
+  }
+}
+
 fun render_awareness(r: Radar) {
   label("Trunk Status")
   gui_separator()
@@ -201,8 +248,12 @@ fun render_awareness(r: Radar) {
   gui_spacing()
   if r.local_files_count == 0 {
     gui_text("No local changes detected")
+  } else if length(r.overlaps) == 0 {
+    gui_text("No overlaps detected")
   } else {
     gui_text(show(r.overlap_count) + " overlaps across " + show(r.branches_scanned) + " branches")
+    gui_spacing()
+    render_overlaps(r.overlaps)
   }
 }
 
@@ -249,12 +300,11 @@ fun render_right_panel(s: Status, r: Radar, commits: list<Commit>) {
     gui_spacing()
     gui_separator()
     gui_spacing()
-    label("Recent Commits")
+    label("Active Contributors")
     gui_spacing()
     let recent = take_commits(commits, 5)
     let authors = unique_authors(recent)
     if length(authors) > 0 {
-      gui_text("Latest commits by")
       render_author_buttons(authors)
     }
   }
@@ -381,6 +431,10 @@ fun main() {
     // Centre: Workflow
     gui_child("##center", 500.0, 418.0, () => {
       gui_spacing()
+      if last_output != "" {
+        gui_text_colored("Action output: " + truncate(last_output, 110), 0.98, 0.80, 0.05, 1.0)
+        gui_spacing()
+      }
 
       if gui_button("Sync Workspace & Pull Trunk") {
         match exec(cmd_in(repo_path, "tbdflow --json sync")) {
@@ -458,6 +512,7 @@ fun main() {
       let combo_str = types_to_combo_str(types)
       let type_idx  = gui_combo("Type##ctype", combo_str, 0)
       let ctype     = nth_str(types, type_idx)
+      //gui_same_line()
       let cmsg      = gui_input_text("Message##cmsg", 256)
       gui_spacing()
 
@@ -522,10 +577,6 @@ fun main() {
 
     // Bottom: tabbed area (full width)
     gui_child("##bottom", 0.0, 0.0, () => {
-      if last_output != "" {
-        label(truncate(last_output, 110))
-        gui_separator()
-      }
       gui_tab_bar("##bottom_tabs", () => {
         gui_tab("Recent Commits", () => {
           gui_spacing()

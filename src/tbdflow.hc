@@ -196,6 +196,18 @@ pub struct Hotspot {
   changes_count: int
 }
 
+pub struct OverlapFile {
+  file: string,
+  level: string
+}
+
+pub struct Overlap {
+  branch: string,
+  author: string,
+  commits_ahead: int,
+  files: list<OverlapFile>
+}
+
 pub struct Radar {
   trunk_branch: string,
   trunk_status: string,
@@ -203,6 +215,7 @@ pub struct Radar {
   branches_scanned: int,
   local_files_count: int,
   overlap_count: int,
+  overlaps: list<Overlap>,
   hotspots: list<Hotspot>
 }
 
@@ -278,8 +291,59 @@ pub fun parse_radar(text: string) {
     branches_scanned:     data.at("branches_scanned").int_or(0),
     local_files_count:    data.at("local_files_count").int_or(0),
     overlap_count:        count_json_array(data.at("overlaps")),
+    overlaps:             extract_overlaps(data.at("overlaps")),
     hotspots:             extract_hotspots(data.at("hotspots"))
   })
+}
+
+pub fun extract_overlaps(arr: maybe<Json>) {
+  match arr {
+    None    => [],
+    Some(j) => match json_array(j) {
+      None        => [],
+      Some(items) => parse_overlaps(items)
+    }
+  }
+}
+
+pub fun parse_overlaps(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => [parse_overlap(x)] + parse_overlaps(rest)
+  }
+}
+
+pub fun parse_overlap(j: Json) {
+  Overlap {
+    branch:        Some(j).at("branch").str_or(""),
+    author:        Some(j).at("author").str_or(""),
+    commits_ahead: Some(j).at("commits_ahead").int_or(0),
+    files:         extract_overlap_files(Some(j).at("files"))
+  }
+}
+
+pub fun extract_overlap_files(arr: maybe<Json>) {
+  match arr {
+    None    => [],
+    Some(j) => match json_array(j) {
+      None        => [],
+      Some(items) => parse_overlap_files(items)
+    }
+  }
+}
+
+pub fun parse_overlap_files(items: list<Json>) {
+  match items {
+    [] => [],
+    [x, ..rest] => [parse_overlap_file(x)] + parse_overlap_files(rest)
+  }
+}
+
+pub fun parse_overlap_file(j: Json) {
+  OverlapFile {
+    file:  Some(j).at("file").str_or(""),
+    level: Some(j).at("level").str_or("")
+  }
 }
 
 pub fun extract_hotspots(arr: maybe<Json>) {
